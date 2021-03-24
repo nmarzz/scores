@@ -2,7 +2,7 @@ import torch
 import functools
 import numpy as np
 from scipy import integrate
-from model import ScoreModel
+from model import ScoreModel,autoencoder
 import matplotlib.pyplot as plt
 
 ## The error tolerance for the black-box ODE solver
@@ -76,16 +76,20 @@ diffusion_coeff_fn = functools.partial(diffusion_coeff, sigma=sigma)
 
 
 
-weights = torch.load('model_weights_bimode_m10p20_std1_std1.pth')
+weights = torch.load('model_weights.pth')
 dim = 1
-embed_dim = 64
-model = ScoreModel(dim,embed_dim)
+embed_dim = 128
+model = ScoreModel(dim,embed_dim,marginal_prob_std_fn)
+# model = autoencoder(dim,embed_dim,marginal_prob_std_fn)
 model.load_state_dict(weights)
 
 device = 'cpu'
-error_tolerance = 1e-7
+error_tolerance = 1e-5
 results = ode_sampler(model,marginal_prob_std_fn,diffusion_coeff_fn,dim,atol=error_tolerance,rtol=error_tolerance,device=device,batch_size = 2000)
 results = results.numpy()
+print(np.mean(results))
+print(np.std(results))
+
 
 
 plt.hist(results,density = True)

@@ -7,7 +7,7 @@ import sklearn.preprocessing
 def base_density_1d(nsamples):
     ''' A function that returns n samples of some 'blackbox' base density '''
     dist1 = 10 + 1*torch.randn(nsamples//2)
-    dist2 = -20 + 1*torch.randn(nsamples//2)
+    dist2 = 0 + 1*torch.randn(nsamples//2)
 
     samples = torch.cat((dist1,dist2))
 
@@ -22,7 +22,8 @@ def get_sample_batch_1d(batch_size):
 
 if __name__ == "__main__":
     # Sample from base density
-    samples = base_density_1d(300).numpy()
+    samples = base_density_1d(400).numpy()
+
 
     # Define an Ito SDE
     sigma = 100

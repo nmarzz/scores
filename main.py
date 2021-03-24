@@ -5,7 +5,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 
-from model import ScoreModel
+from model import ScoreModel,autoencoder
 from density import get_sample_batch_1d
 
 
@@ -20,14 +20,17 @@ def marginal_prob_std(t, sigma):
 def diffusion_coeff(t, sigma):
   return torch.tensor(sigma**t, device=device)
 
+
 def loss_fn(model, x, marginal_prob_std, eps=1e-5):
   random_t = torch.rand(x.shape[0], device=x.device) * (1. - eps) + eps
   z = torch.randn_like(x)
   std = marginal_prob_std(random_t)
-
   perturbed_x = x + z * std[:, None]
   score = model(perturbed_x, random_t)
+
+
   loss = torch.mean(torch.sum((score * std[:, None] + z)**2, dim=1))
+
 
   return loss
 
@@ -38,10 +41,10 @@ diffusion_coeff_fn = functools.partial(diffusion_coeff, sigma=sigma)
 
 
 # Define model
-
-embed_dim = 64 # Dimension time is embedded in
+embed_dim = 128 # Dimension time is embedded in
 dim = 1
-model = ScoreModel(dim,embed_dim = embed_dim)
+model = ScoreModel(dim,embed_dim = embed_dim,marginal_prob_std=marginal_prob_std_fn)
+# model = autoencoder(dim,embed_dim,marginal_prob_std_fn)
 
 # Define optimizer
 lr = 1e-4
@@ -49,17 +52,22 @@ momentum = 0.9
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum = momentum)
 
 
-n_epochs =   1500
+n_epochs =   15000
 batch_size = 256
 
 
 losses = []
 torch.autograd.set_detect_anomaly(True)
 for epoch in range(n_epochs):
-    print('{} out of {} epochs'.format(epoch,n_epochs))
+
     batch = get_sample_batch_1d(batch_size)
+    batch.requires_grad = True
     loss = loss_fn(model,batch,marginal_prob_std_fn)
-    print('Loss: {}'.format(loss))
+
+
+    if epoch % 100 == 0:
+        print('{} out of {} epochs'.format(epoch,n_epochs))
+        print('Loss: {}'.format(loss))
 
     optimizer.zero_grad()
     loss.backward()
