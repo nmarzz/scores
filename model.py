@@ -57,7 +57,7 @@ class ScoreModel(nn.Module):
         h = self.linear1(x)
         h += self.dense1(embed)
         h = torch.sigmoid(h)
-                
+
         h = self.linear2(h)
 
         h = (h-x) / self.marginal_prob_std(t)[:,None]
@@ -151,20 +151,25 @@ class autoencoder(nn.Module):
             nn.Linear(dim, 128),
             nn.ReLU(True),
             nn.Linear(128, 64),
-            nn.ReLU(True), nn.Linear(64, 12), nn.ReLU(True), nn.Linear(12, 3))
+            nn.ReLU(True),
+            nn.Linear(64, 12),
+            nn.ReLU(True),
+            nn.Linear(12, 3))
+
         self.decoder = nn.Sequential(
             nn.Linear(3, 12),
             nn.ReLU(True),
             nn.Linear(12, 64),
             nn.ReLU(True),
             nn.Linear(64, 128),
-            nn.ReLU(True), nn.Linear(128, dim))
+            nn.ReLU(True),
+            nn.Linear(128, dim))
 
         self.marginal_prob_std = marginal_prob_std
 
     def forward(self, x,t):
-        x = self.encoder(x)
-        x = self.decoder(x)
+        h = self.encoder(x)
+        h = self.decoder(h)
+        h = h / self.marginal_prob_std(t)[:,None] # Normalize
 
-        x = x / self.marginal_prob_std(t)[:,None]
-        return x
+        return h
