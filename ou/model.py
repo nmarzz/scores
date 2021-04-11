@@ -41,8 +41,8 @@ class ScoreModel(nn.Module):
         self.linear2 = nn.Linear(embed_dim,dimension)
         # self.linear2.weight = nn.Parameter(self.linear1.weight.transpose(0,1))
 
-        self.dense1 = nn.Linear(embed_dim,embed_dim)
-        self.dense2 = nn.Linear(embed_dim,embed_dim)
+        self.dense1 = nn.Linear(embed_dim,embed_dim,bias = False)
+        self.dense2 = nn.Linear(embed_dim,embed_dim, bias = False)
 
         self.sigma = sigma
         self.marginal_prob_std = marginal_prob_std
@@ -51,16 +51,15 @@ class ScoreModel(nn.Module):
 
     def forward(self,x,t):
 
-
         embed = self.swish(self.embed(t))
 
         h = self.linear1(x)
         h += self.dense1(embed)
         h = torch.sigmoid(h)
-
         h = self.linear2(h)
 
-        h = (h-x) / self.marginal_prob_std(t)[:,None]
+        h = (h - x)/ self.marginal_prob_std(t)[:,None]
+        # h = (h - x)
 
         return h
 

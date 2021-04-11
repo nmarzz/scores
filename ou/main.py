@@ -13,21 +13,21 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # For simplicity and as the example does it, we use the PDE dx = sigma^t dw, dw = Wiener
 
 # Then, the marginal probability and diffusion coefficient are roughly
-def marginal_prob_std(t, sigma):
+def marginal_prob_std(t, D):
   t = torch.tensor(t, device=device)
-  return torch.sqrt((sigma**(2 * t) - 1.) / 2. / np.log(sigma))
+  return torch.sqrt(D * ( 1 - np.exp(-2*t)))
 
-def diffusion_coeff(t, sigma):
-  return torch.tensor(sigma**t, device=device)
+def diffusion_coeff(t, D):
+  return torch.tensor(np.sqrt(2*D), device=device)
 
 
-def loss_fn(model, x, marginal_prob_std, eps=1e-5):
-  random_t = torch.rand(x.shape[0], device=x.device) * (1. - eps) + eps
+def loss_fn(model, x, marginal_prob_std, eps=1e-5,T=2):
+  random_t = T*torch.rand(x.shape[0], device=x.device) * (1. - eps) + eps
   z = torch.randn_like(x)
   std = marginal_prob_std(random_t)
-  perturbed_x = x + z * std[:, None]
+  perturbed_x = (x*np.exp( - random_t)[:,None]) + (z * std[:, None])
+  # perturbed_x = x + (z * std[:, None])
   score = model(perturbed_x, random_t)
-
 
   loss = torch.mean(torch.sum((score * std[:, None] + z)**2, dim=1))
 
@@ -35,9 +35,10 @@ def loss_fn(model, x, marginal_prob_std, eps=1e-5):
   return loss
 
 
-sigma =  25.0
-marginal_prob_std_fn = functools.partial(marginal_prob_std, sigma=sigma)
-diffusion_coeff_fn = functools.partial(diffusion_coeff, sigma=sigma)
+D = 1
+marginal_prob_std_fn = functools.partial(marginal_prob_std, D=D)
+diffusion_coeff_fn = functools.partial(diffusion_coeff, D=D)
+
 
 
 # Define model
@@ -52,12 +53,12 @@ momentum = 0.9
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum = momentum)
 
 
-n_epochs =   15000
-batch_size = 256
+n_epochs =   5000
+batch_size = 1024
 
 
 losses = []
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 for epoch in range(n_epochs):
 
     batch = get_sample_batch_1d(batch_size)
@@ -78,5 +79,5 @@ for epoch in range(n_epochs):
 
 torch.save(model.state_dict(),'model_weights.pth')
 
-plt.plot(range(n_epochs),losses)
-plt.show()
+# plt.plot(range(n_epochs),losses)
+# plt.show()
